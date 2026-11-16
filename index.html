@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<!--
+  学术个人主页 · 单文件版
+  ────────────────────────────────────────────────
+  同目录下的文件：
+    · Portrait.jpg  —— 照片（4:5 或 3:4 竖版最佳），缺失时显示占位图
+    · Resume.pdf    —— 简历，左侧「下载简历」指向它
+    · map.html      —— 旅途地图，底部卡片指向它（尚未创建）
+
+  所有样式都在本文件内，无外部字体 / CDN / 统计代码，断网可看。
+  带「✏️」的注释 = 需要确认或替换的位置。
+-->
+<html lang="zh-CN" data-lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zixuan Xiao · 博士研究生 | 多伦多大学</title>
+<meta name="description" id="metaDesc" content="Zixuan Xiao，多伦多大学物理系博士研究生，研究大气传输、温室气体排放量化与数据同化。教育经历、论文、会议、技能与简历。">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#fbfaf7">
+<link rel="canonical" href="https://dogtorxiao.github.io/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Zixuan Xiao">
+<meta property="og:title" content="Zixuan Xiao · 博士研究生 | 多伦多大学">
+<meta property="og:description" content="多伦多大学物理系博士研究生，研究大气传输、温室气体排放量化与数据同化。教育经历、论文、会议与简历。">
+<meta property="og:url" content="https://dogtorxiao.github.io/">
+<meta property="og:image" content="https://dogtorxiao.github.io/Portrait.jpg">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%232b4a6f'/%3E%3Cpath d='M22 17h14l7 7v23H22z' fill='none' stroke='%23fbfaf7' stroke-width='3'/%3E%3Cpath d='M36 17v8h7' fill='none' stroke='%23fbfaf7' stroke-width='3'/%3E%3Cpath d='M28 34h10M28 40h8' stroke='%23fbfaf7' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  /* ── 变量 ────────────────────────────────────────────── */
+  :root{
+    --paper:#fbfaf7;
+    --paper-2:#f3f0e7;
+    --ink:#1b1a17;
+    --ink-2:#3b3933;
+    --muted:#6c685e;
+    --rule:#d9d4c6;
+    --rule-soft:#e7e3d8;
+    --accent:#2b4a6f;
+    --accent-dark:#223c5b;
+    --serif:"Charter","Iowan Old Style","Palatino Linotype",Palatino,"Songti SC",STSong,"Noto Serif SC",Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+
+  *,*::before,*::after{box-sizing:border-box}
+  html{scroll-behavior:smooth;scroll-padding-top:32px}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:var(--sans);font-size:16.5px;line-height:1.75;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  }
+  p{text-wrap:pretty}
+  h1,h2,h3{text-wrap:balance}
+  ::selection{background:var(--accent);color:#fff}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+  .skip{
+    position:absolute;left:16px;top:-60px;z-index:20;
+    background:var(--ink);color:var(--paper);padding:9px 15px;
+    font-size:13px;text-decoration:none;transition:top .2s ease;
+  }
+  .skip:focus{top:12px}
+
+  /* ── 顶栏 / 语言切换 ───────────────────────────────── */
+  .site-top{
+    position:sticky;top:0;z-index:30;background:var(--paper);
+    border-bottom:1px solid transparent;transition:border-color .25s ease;
+  }
+  .site-top.scrolled{border-bottom-color:var(--rule)}
+  .top-in{
+    max-width:1128px;margin:0 auto;padding:0 clamp(20px,4.5vw,56px);
+    height:54px;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  }
+  .top-name{
+    font-family:var(--serif);font-size:14.5px;color:var(--ink);text-decoration:none;letter-spacing:.01em;
+    opacity:0;visibility:hidden;transition:opacity .25s ease,visibility .25s ease;
+  }
+  .site-top.scrolled .top-name{opacity:1;visibility:visible}
+  .lang-switch{display:flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--rule)}
+  .lang-switch button{
+    appearance:none;-webkit-appearance:none;border:0;background:transparent;cursor:pointer;
+    font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--muted);
+    padding:5px 9px;line-height:1;transition:background .18s ease,color .18s ease;
+  }
+  .lang-switch button:hover{color:var(--ink)}
+  .lang-switch button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+  .lang-switch button[aria-pressed="true"]:hover{color:var(--paper)}
+
+  /* 语言显示规则 */
+  html[data-lang="zh"] .l-en{display:none}
+  html[data-lang="en"] .l-zh{display:none}
+  html[data-lang="en"] .sec-title .kick{display:none}
+
+  /* ── 版式：左侧信息栏 + 右侧正文 ───────────────────── */
+  .page{
+    max-width:1128px;margin:0 auto;
+    padding:40px clamp(20px,4.5vw,56px) 56px;
+    display:grid;grid-template-columns:264px minmax(0,1fr);
+    gap:clamp(36px,5vw,60px);align-items:start;
+  }
+
+  /* ── 左栏 ──────────────────────────────────────────── */
+  .sidebar{position:sticky;top:72px;min-width:0}
+
+  .portrait{
+    position:relative;margin:0 0 20px;aspect-ratio:3/4;overflow:hidden;
+    border:1px solid var(--rule);background:var(--paper-2);
+  }
+  .portrait img{
+    position:absolute;inset:0;z-index:1;display:block;
+    width:100%;height:100%;object-fit:cover;object-position:50% 35%;
+  }
+  .portrait-fallback{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:10px;color:var(--muted);
+  }
+  .portrait-fallback svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:1.4;opacity:.5}
+  .portrait-fallback span{
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;
+    text-transform:uppercase;opacity:.75;
+  }
+
+  .identity h1{
+    margin:0 0 10px;font-family:var(--serif);font-weight:600;
+    font-size:35px;line-height:1.16;letter-spacing:.005em;
+  }
+  .role{margin:0 0 3px;font-size:15px;font-weight:500;line-height:1.55;color:var(--ink)}
+  .affil{margin:0 0 20px;font-size:13.5px;line-height:1.65;color:var(--muted)}
+
+  .cv-btn{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin:0 0 22px;padding:11px 14px;
+    background:var(--accent);border:1px solid var(--accent);color:#fff;
+    font-size:13.5px;text-decoration:none;
+    transition:background .2s ease,border-color .2s ease;
+  }
+  .cv-btn:hover{background:var(--accent-dark);border-color:var(--accent-dark);color:#fff}
+  .cv-btn .tag{
+    font-family:var(--mono);font-size:9px;letter-spacing:.16em;
+    padding:2px 5px;border:1px solid rgba(255,255,255,.45);
+  }
+
+  .contact{
+    margin:0 0 20px;padding-top:15px;border-top:1px solid var(--rule);
+    display:grid;gap:8px;font-size:13px;
+  }
+  .contact div{display:grid;grid-template-columns:56px minmax(0,1fr);gap:10px;align-items:baseline}
+  .contact dt{font-size:11.5px;color:var(--muted);letter-spacing:.02em}
+  .contact dd{margin:0;color:var(--ink-2);overflow-wrap:anywhere}
+  .contact a{color:var(--ink-2);text-decoration:none;border-bottom:1px solid var(--rule)}
+  .contact a:hover{color:var(--accent);border-color:var(--accent)}
+
+  .elsewhere{
+    list-style:none;margin:0;padding:0;
+    display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12.5px;
+  }
+  .elsewhere a{color:var(--accent);text-decoration:none}
+  .elsewhere a:hover{text-decoration:underline;text-underline-offset:3px}
+
+  .updated{
+    margin:22px 0 0;font-family:var(--mono);font-size:9.5px;
+    letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  }
+
+  /* ── 右栏：导语 ─────────────────────────────────────── */
+  .content{min-width:0}
+  .lede{margin:0 0 14px}
+  .intro{
+    margin:0 0 16px;max-width:42em;
+    font-family:var(--serif);font-size:17px;line-height:1.95;color:var(--ink-2);
+  }
+  .intro strong{color:var(--ink);font-weight:600}
+  .interests{margin:0;font-size:14px;line-height:1.9;color:var(--ink-2)}
+  .interests .k{
+    display:inline-block;margin-right:10px;
+    font-size:11px;letter-spacing:.04em;color:var(--muted);
+  }
+
+  /* ── 栏目标题 ───────────────────────────────────────── */
+  .sec{margin-top:46px}
+  .sec-title{
+    display:flex;align-items:center;gap:14px;margin:0 0 12px;
+    font-family:var(--serif);font-size:21px;font-weight:600;line-height:1.3;
+  }
+  .sec-title .rule{flex:1;min-width:20px;height:1px;background:var(--rule)}
+  .sec-title .kick{
+    font-family:var(--mono);font-size:9.5px;font-weight:400;
+    letter-spacing:.2em;text-transform:uppercase;color:var(--muted);white-space:nowrap;
+  }
+
+  /* ── 学习经历 ───────────────────────────────────────── */
+  .entries{list-style:none;margin:4px 0 0;padding:0}
+  .entry{
+    display:grid;grid-template-columns:122px minmax(0,1fr);gap:16px;
+    padding:14px 0;
+  }
+  .entry + .entry{border-top:1px solid var(--rule-soft)}
+  .entry .when{
+    font-family:var(--mono);font-size:11px;letter-spacing:.01em;
+    color:var(--muted);padding-top:5px;white-space:nowrap;
+  }
+  .entry h3{margin:0 0 3px;font-size:16.5px;font-weight:600;line-height:1.5}
+  .entry .org{margin:0;font-size:14px;color:var(--muted)}
+  .entry .note{margin:4px 0 0;font-size:13px;color:var(--muted)}
+
+  /* ── 论文 ──────────────────────────────────────────── */
+  .pubs{list-style:none;margin:4px 0 0;padding:0;counter-reset:pub}
+  .pub{
+    display:grid;grid-template-columns:32px minmax(0,1fr);gap:14px;
+    padding:15px 0;counter-increment:pub;
+  }
+  .pub + .pub{border-top:1px solid var(--rule-soft)}
+  .pub::before{
+    content:"[" counter(pub) "]";padding-top:3px;
+    font-family:var(--mono);font-size:11px;color:var(--muted);
+  }
+  .pub-title{margin:0 0 4px;font-size:16px;font-weight:600;line-height:1.55}
+  .authors{margin:0 0 4px;font-size:13.5px;line-height:1.7;color:var(--muted)}
+  .authors strong{color:var(--ink);font-weight:600}
+  .venue{
+    margin:0;font-family:var(--serif);
+    font-size:14px;color:var(--ink-2);
+  }
+  .venue em{font-style:italic}
+  .badge{
+    display:inline-block;margin-left:8px;vertical-align:1.5px;
+    font-family:var(--mono);font-style:normal;font-size:9px;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--accent);
+    border:1px solid var(--rule);
+    border-color:color-mix(in srgb,var(--accent) 30%,transparent);
+    padding:1px 5px;
+  }
+  .pub-links{display:flex;flex-wrap:wrap;gap:5px 14px;margin:8px 0 0}
+  .pub-links a{
+    font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--accent);text-decoration:none;padding-bottom:1px;
+    border-bottom:1px solid var(--rule);
+    border-bottom-color:color-mix(in srgb,var(--accent) 35%,transparent);
+  }
+  .pub-links a:hover{color:var(--ink);border-color:var(--ink)}
+  .footnote{margin:12px 0 0;font-size:12px;color:var(--muted)}
+  .footnote a{color:var(--muted);text-underline-offset:3px}
+  .footnote a:hover{color:var(--accent)}
+
+  /* ── 会议与报告 ─────────────────────────────────────── */
+  .talks{list-style:none;margin:4px 0 0;padding:0}
+  .talk{
+    display:grid;grid-template-columns:76px minmax(0,1fr);gap:16px;
+    align-items:baseline;padding:12px 0;
+  }
+  .talk + .talk{border-top:1px solid var(--rule-soft)}
+  .talk .when{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .talk .t{margin:0;font-size:15px;line-height:1.6}
+  .talk .where{margin:2px 0 0;font-size:13px;color:var(--muted)}
+  .empty{
+    margin:6px 0 0;padding:6px 0;font-family:var(--serif);
+    font-style:italic;font-size:14.5px;color:var(--muted);
+  }
+
+  /* ── 技能 ──────────────────────────────────────────── */
+  .skills{margin:4px 0 0;display:grid}
+  .skill{
+    display:grid;grid-template-columns:104px minmax(0,1fr);gap:18px;
+    padding:10px 0;
+  }
+  .skill + .skill{border-top:1px solid var(--rule-soft)}
+  .skill dt{font-size:12px;color:var(--muted);padding-top:1px}
+  .skill dd{margin:0;font-size:14.5px;color:var(--ink-2)}
+
+  /* ── 地图 ──────────────────────────────────────────── */
+  .map-card{
+    display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;
+    align-items:center;margin-top:6px;padding:20px 22px;
+    border:1px solid var(--rule);text-decoration:none;color:var(--ink);
+    background-color:var(--paper-2);
+    background-image:radial-gradient(circle at 1px 1px,rgba(27,26,23,.10) 1px,transparent 0);
+    background-size:20px 20px;
+    transition:border-color .25s ease,background-color .25s ease;
+  }
+  .map-card:hover{border-color:var(--accent);background-color:#f7f4ec}
+  .map-pin{
+    display:grid;place-items:center;width:38px;height:38px;flex:none;
+    border:1px solid var(--rule);border-radius:50%;background:var(--paper);
+  }
+  .map-pin svg{width:16px;height:16px;fill:none;stroke:var(--accent);stroke-width:1.6}
+  .map-card strong{display:block;font-size:15.5px;font-weight:600;line-height:1.5}
+  .map-card .desc{display:block;margin-top:2px;font-size:13px;color:var(--muted)}
+  .map-arrow{font-size:15px;color:var(--muted);transition:transform .25s ease,color .25s ease}
+  .map-card:hover .map-arrow{transform:translate(2px,-2px);color:var(--accent)}
+  .map-note{
+    margin:10px 0 0;font-family:var(--mono);font-size:10px;
+    letter-spacing:.06em;color:var(--muted);
+  }
+  .map-note code{
+    font-family:inherit;font-size:10px;color:var(--ink-2);
+    background:var(--paper-2);border:1px solid var(--rule-soft);padding:1px 4px;
+  }
+
+  /* ── 页脚 ──────────────────────────────────────────── */
+  .site-footer{margin-top:52px;border-top:1px solid var(--rule);padding:22px 0 40px}
+  .foot{
+    max-width:1128px;margin:0 auto;padding:0 clamp(20px,4.5vw,56px);
+    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    font-size:12.5px;color:var(--muted);
+  }
+  .foot p{margin:0}
+  .foot a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent}
+  .foot a:hover{color:var(--accent);border-color:var(--rule)}
+
+  /* ── 窄屏 ──────────────────────────────────────────── */
+  @media (max-width:980px){
+    .page{display:block;padding-top:28px}
+    .top-in{height:48px}
+    .top-name{font-size:13.5px}
+    .sidebar{
+      position:static;display:flex;flex-wrap:wrap;gap:16px 18px;
+      align-items:flex-start;margin:0 0 4px;padding-bottom:24px;
+      border-bottom:1px solid var(--rule);
+    }
+    .portrait{width:132px;flex:none;margin:0}
+    .identity{flex:1 1 150px;min-width:0}
+    .identity h1{font-size:27px;margin-bottom:8px}
+    .cv-btn,.contact,.elsewhere,.updated{flex:1 1 100%}
+    .cv-btn{margin:2px 0 0}
+    .updated{margin-top:6px}
+    .intro{font-size:16.5px;line-height:1.9}
+    .sec{margin-top:36px}
+  }
+  @media (max-width:620px){
+    body{font-size:16px}
+    .entry{grid-template-columns:1fr;gap:4px}
+    .entry .when{padding-top:0}
+    .talk{grid-template-columns:minmax(0,1fr);gap:2px}
+    .talk .when{grid-column:1 / -1}
+    .skill{grid-template-columns:1fr;gap:3px}
+    .contact div{grid-template-columns:56px minmax(0,1fr)}
+    .map-card{grid-template-columns:auto minmax(0,1fr);padding:18px}
+    .map-arrow{display:none}
+    .sec-title{font-size:19.5px}
+    .sec-title .kick{font-size:9px;letter-spacing:.16em}
+    .foot{flex-direction:column}
+  }
+
+  /* ── 打印 ──────────────────────────────────────────── */
+  @media print{
+    body{background:#fff;font-size:10.5pt}
+    .skip,.site-top,.cv-btn,.map-card,.map-note,.site-footer,#map{display:none}
+    .sidebar{top:auto}
+    .page{display:block;max-width:none;padding:0}
+    .sidebar{position:static;border:0;padding:0;margin:0 0 18px}
+    .portrait{width:104px;border-color:#999}
+    .sec{margin-top:20px;break-inside:avoid}
+    a{color:#000;text-decoration:none}
+    .sec-title .rule{background:#aaa}
+  }
+</style>
+<script>
+  /* 先应用记住的语言，避免打开时闪一下中文 */
+  (function () {
+    try {
+      if (localStorage.getItem('lang') === 'en') {
+        document.documentElement.setAttribute('data-lang', 'en');
+        document.documentElement.setAttribute('lang', 'en');
+      }
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body id="top">
+<a class="skip" href="#main"><span class="l-zh">跳到主要内容</span><span class="l-en">Skip to main content</span></a>
+
+<header class="site-top">
+  <div class="top-in">
+    <a class="top-name" href="#top">Zixuan Xiao</a>
+    <div class="lang-switch" role="group" aria-label="语言 / Language">
+      <button type="button" data-lang-set="zh" aria-pressed="true">中</button>
+      <button type="button" data-lang-set="en" aria-pressed="false">EN</button>
+    </div>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- ══ 左栏：身份、照片、联系方式 ══════════════════════ -->
+  <aside class="sidebar">
+    <figure class="portrait">
+      <div class="portrait-fallback" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.6"/><path d="M4.5 21c.9-4.1 3.8-6.2 7.5-6.2s6.6 2.1 7.5 6.2"/></svg>
+        <span>Portrait.jpg</span>
+      </div>
+      <img src="Portrait.jpg" alt="Zixuan Xiao" width="1009" height="1382" onerror="this.style.display='none'">
+    </figure>
+
+    <div class="identity">
+      <h1>Zixuan Xiao</h1>
+      <p class="role"><span class="l-zh">博士研究生</span><span class="l-en">Ph.D. Student</span></p>
+      <p class="affil"> 
+        <span class="l-zh">多伦多大学 · 物理系<br>Dylan Jones 课题组</span>
+        <span class="l-en">University of Toronto<br>Department of Physics<br>Dylan Jones Group</span>
+      </p>
+    </div>
+
+    <a class="cv-btn" href="Resume.pdf" download>
+      <span><span class="l-zh">下载简历</span><span class="l-en">Download CV</span></span>
+      <span class="tag">PDF</span>
+    </a>
+
+    <dl class="contact">
+      <div>
+        <dt><span class="l-zh">邮箱</span><span class="l-en">Email</span></dt>
+        <dd><a href="mailto:zx.xiao@mail.utoronto.ca">zx.xiao@mail.utoronto.ca</a></dd>
+      </div>
+      <div>
+        <dt><span class="l-zh">所在地</span><span class="l-en">Location</span></dt>
+        <dd><span class="l-zh">多伦多，加拿大</span><span class="l-en">Toronto, Canada</span></dd>
+      </div>
+    </dl>
+
+    <ul class="elsewhere">
+      <li><a href="https://scholar.google.ca/citations?user=pMBo1yAAAAAJ&amp;hl=en&amp;oi=sra" target="_blank" rel="noopener">Scholar ↗</a></li>
+      <li><a href="https://github.com/dogtorXiao" target="_blank" rel="noopener">GitHub ↗</a></li>
+      <li><a href="https://orcid.org/0009-0006-3858-8817" target="_blank" rel="noopener">ORCID ↗</a></li>
+    </ul>
+
+    <p class="updated"><span class="l-zh">最后更新 · 2026.11</span><span class="l-en">Last updated · 2026.11</span></p>
+  </aside>
+
+  <!-- ══ 右栏：正文 ═════════════════════════════════════ -->
+  <main id="main" class="content">
+
+    <div class="lede">
+      <p class="intro l-zh">
+        我是<strong>多伦多大学</strong>物理系的博士研究生，师从 Dylan Jones 教授，预计 2026 年毕业。研究聚焦温室气体与大气污染的排放量化：用 WRF-XSTILT 追踪 CO₂ 的传输来源，用高分辨率 WRF-LES 模拟烟羽并结合观测反演电厂排放，也在尝试用机器学习模拟烟羽。
+      </p>
+      <p class="intro l-en">
+        I am a Ph.D. student in the <strong>Department of Physics, University of Toronto</strong>, advised by Prof. Dylan Jones and expecting to graduate in 2026. My research quantifies greenhouse gas and air-pollution emissions: I use WRF-XSTILT to trace where CO₂ comes from, high-resolution WRF-LES to simulate plumes and infer power-plant emissions from observations, and I am also exploring the use of Machine Learning for emulating point source plumes.
+      </p>
+      <p class="interests">
+        <span class="k"><span class="l-zh">研究方向</span><span class="l-en">Research</span></span>
+        <span class="l-zh">大气传输、温室气体排放反演、数据同化与机器学习应用。</span>
+        <span class="l-en">Atmospheric transport, greenhouse gas emission inversion, data assimilation, and machine learning.</span>
+      </p>
+    </div>
+
+    <!-- ══ 学习经历 ══════════════════════════════════ -->
+    <section class="sec" id="education" aria-labelledby="edu-title">
+      <h2 class="sec-title" id="edu-title">
+        <span class="l-zh">学习经历</span><span class="l-en">Education</span>
+        <span class="rule" aria-hidden="true"></span><span class="kick">Education</span>
+      </h2>
+
+      <ol class="entries">
+        <li class="entry">
+          <span class="when"><span class="l-zh">2021 — 至今</span><span class="l-en">2021 — Present</span></span>
+          <div>
+            <h3><span class="l-zh">博士研究生 · 物理学</span><span class="l-en">Ph.D. in Physics</span></h3>
+            <p class="org"><span class="l-zh">多伦多大学 · 物理系</span><span class="l-en">University of Toronto · Department of Physics</span></p>
+            <p class="note"><span class="l-zh">导师：Dylan Jones 教授　|　预计 2026 年毕业</span><span class="l-en">Advisor: Prof. Dylan Jones &nbsp;|&nbsp; Expected 2026</span></p>
+          </div>
+        </li>
+        <li class="entry">
+          <span class="when">2017 — 2021</span>
+          <div>
+            <h3><span class="l-zh">本科 · 大气科学</span><span class="l-en">B.Sc. in Atmospheric Sciences</span></h3>
+            <p class="org"><span class="l-zh">中国科学技术大学 · 合肥</span><span class="l-en">University of Science and Technology of China · Hefei</span></p>
+            <p class="note"><span class="l-zh">导师：Zhe Jiang 教授　|　国家奖学金、Laurel 奖学金等</span><span class="l-en">Advisor: Prof. Zhe Jiang &nbsp;|&nbsp; National Scholarship, Laurel Scholarship, etc.</span></p>
+          </div>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ══ 发表论文 ══════════════════════════════════ -->
+    <section class="sec" id="publications" aria-labelledby="pub-title">
+      <h2 class="sec-title" id="pub-title">
+        <span class="l-zh">发表论文</span><span class="l-en">Publications</span>
+        <span class="rule" aria-hidden="true"></span><span class="kick">Publications</span>
+      </h2>
+
+      <ol class="pubs">
+        <li class="pub">
+          <div>
+            <h3 class="pub-title">High-Resolution Modeling to Quantify CO₂ Emissions From an Industrial Point Source</h3>
+            <p class="authors"><strong>Zixuan Xiao</strong>, Dylan B. A. Jones, Dien Wu, Jinwoong Kim, Ray Nassar, Benoit Blanco</p>
+            <p class="venue"><em>Journal of Geophysical Research: Atmospheres</em> 131(13), e2025JD045978 · 2026</p>
+            <p class="pub-links"><a href="https://doi.org/10.1029/2025JD045978" target="_blank" rel="noopener">DOI</a></p>
+          </div>
+        </li>
+
+        <li class="pub">
+          <div>
+            <h3 class="pub-title">Inverse Modeling of CO₂ Emissions from a Facility Source Using Large-Eddy Simulations with Observations from Uncrewed Aerial Vehicles</h3>
+            <p class="authors"><strong>Zixuan Xiao</strong> et al.</p>
+            <p class="venue">
+              <span class="l-zh">审稿中 · 2026</span><span class="l-en">Under review · 2026</span>
+            </p>
+          </div>
+        </li>
+      </ol>
+      <p class="footnote">
+        <span class="l-zh">完整论文与项目列表见 <a href="Resume.pdf">Resume.pdf</a>。</span>
+        <span class="l-en">Full list of publications and projects in <a href="Resume.pdf">Resume.pdf</a>.</span>
+      </p>
+    </section>
+
+    <!-- ══ 会议与报告 ════════════════════════════════ -->
+    <section class="sec" id="talks" aria-labelledby="talks-title">
+      <h2 class="sec-title" id="talks-title">
+        <span class="l-zh">会议与报告</span><span class="l-en">Conferences</span>
+        <span class="rule" aria-hidden="true"></span><span class="kick">Talks</span>
+      </h2>
+
+      <ul class="talks">
+        <li class="talk">
+          <span class="when">2026.05</span>
+          <div>
+            <p class="t">Inverse Modeling of CO₂ Emission from A Controlled Release Point Source Using Large-Eddy Simulations with Observations from Uncrewed Aerial Vehicles</p>
+            <p class="where">EGU · Vienna</p>
+          </div>
+        </li>
+        <li class="talk">
+          <span class="when">2024.12</span>
+          <div>
+            <p class="t">Quantifying Emissions of CO₂ from the Bełchatów Power Plant Using OCO-3 Data and the WRF-XSTILT Model</p>
+            <p class="where">AGU · Washington, D.C.</p>
+          </div>
+        </li>
+        <li class="talk">
+          <span class="when">2023.05</span>
+          <div>
+            <p class="t">Quantifying emissions of CO₂ from the Bełchatów power plant using OCO-3 data and the WRF-XSTILT model</p>
+            <p class="where">CMOS, Montreal</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ══ 技能 ══════════════════════════════════════ -->
+    <section class="sec" id="skills" aria-labelledby="skills-title">
+      <h2 class="sec-title" id="skills-title">
+        <span class="l-zh">技能</span><span class="l-en">Skills</span>
+        <span class="rule" aria-hidden="true"></span><span class="kick">Skills</span>
+      </h2>
+
+      <dl class="skills">
+        <div class="skill">
+          <dt><span class="l-zh">编程</span><span class="l-en">Programming</span></dt>
+          <dd>Python · R</dd>
+        </div>
+        <div class="skill">
+          <dt><span class="l-zh">方法与模型</span><span class="l-en">Methods</span></dt>
+          <dd>
+            <span class="l-zh">WRF-XSTILT · WRF-LES · 数据同化 · 机器学习</span>
+            <span class="l-en">WRF-XSTILT · WRF-LES · data assimilation · Machine Learning</span>
+          </dd>
+        </div>
+        <div class="skill">
+          <dt><span class="l-zh">语言</span><span class="l-en">Languages</span></dt>
+          <dd>
+            <span class="l-zh">中文（母语）· 英语（TOEFL 103）· 俄语（兴趣）· 西班牙语（兴趣）</span>
+            <span class="l-en">Chinese (native) · English (TOEFL 103) · Russian (interest) · Spanish (interest)</span>
+          </dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- ══ 旅途地图 ══════════════════════════════════ -->
+    <section class="sec" id="map" aria-labelledby="map-title">
+      <h2 class="sec-title" id="map-title">
+        <span class="l-zh">旅途地图</span><span class="l-en">Places</span>
+        <span class="rule" aria-hidden="true"></span><span class="kick">Places</span>
+      </h2>
+
+      <a class="map-card" href="map.html">
+        <span class="map-pin" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 21s6.5-6.1 6.5-11A6.5 6.5 0 0 0 5.5 10c0 4.9 6.5 11 6.5 11Z"/><circle cx="12" cy="10" r="2.4"/></svg>
+        </span>
+        <span class="map-copy">
+          <strong>
+            <span class="l-zh">我去过的地方，都在这张地图上</span>
+            <span class="l-en">Every place I have been, on one map</span>
+          </strong>
+          <span class="desc">
+            <span class="l-zh">读博以来去过的城市、参加过的会，按年份标在一张可交互的地图里。</span>
+            <span class="l-en">Cities visited and conferences attended since starting my Ph.D., pinned by year on an interactive map.</span>
+          </span>
+        </span>
+        <span class="map-arrow" aria-hidden="true">↗</span>
+      </a>
+      <p class="map-note">
+        <span class="l-zh">地图待接入 · <code>map.html</code></span>
+        <span class="l-en">Map coming soon · <code>map.html</code></span>
+      </p>
+    </section>
+
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div class="foot">
+    <p>© 2026 Zixuan Xiao · University of Toronto</p>
+    <p>
+      <a href="Resume.pdf">Resume.pdf</a> ·
+      <a href="mailto:zx.xiao@mail.utoronto.ca">Email</a> ·
+      <a href="#top"><span class="l-zh">回到顶部 ↑</span><span class="l-en">Back to top ↑</span></a>
+    </p>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var meta = document.getElementById('metaDesc');
+    var copy = {
+      zh: {
+        title: 'Zixuan Xiao · 博士研究生 | 多伦多大学',
+        desc: 'Zixuan Xiao，多伦多大学物理系博士研究生，研究大气传输、温室气体排放量化与数据同化。教育经历、论文、会议、技能与简历。'
+      },
+      en: {
+        title: 'Zixuan Xiao · Ph.D. Student | University of Toronto',
+        desc: 'Zixuan Xiao is a Ph.D. student in the Department of Physics at the University of Toronto, working on atmospheric transport, greenhouse gas emission quantification, and data assimilation.'
+      }
+    };
+    var buttons = Array.prototype.slice.call(document.querySelectorAll('[data-lang-set]'));
+
+    function apply(lang, persist) {
+      lang = lang === 'en' ? 'en' : 'zh';
+      root.setAttribute('data-lang', lang);
+      root.setAttribute('lang', lang === 'en' ? 'en' : 'zh-CN');
+      document.title = copy[lang].title;
+      if (meta) meta.setAttribute('content', copy[lang].desc);
+      buttons.forEach(function (b) {
+        b.setAttribute('aria-pressed', b.getAttribute('data-lang-set') === lang ? 'true' : 'false');
+      });
+      if (persist) { try { localStorage.setItem('lang', lang); } catch (e) {} }
+    }
+
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () { apply(b.getAttribute('data-lang-set'), true); });
+    });
+    apply(root.getAttribute('data-lang'), false);
+
+    var top = document.querySelector('.site-top');
+    function onScroll() { top.classList.toggle('scrolled', window.scrollY > 4); }
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+  })();
+</script>
+</body>
+</html>
