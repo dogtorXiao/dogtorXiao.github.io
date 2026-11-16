@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<!--
+  旅途地图 · map.html
+  ────────────────────────────────────────────────────────────
+  读取同目录的 travel.txt，把城市按时间顺序连成一条线。
+  点击城市 → 弹出时间、寄语、照片。
+  照片放在 photos/国家-城市/ 里（例如 photos/加拿大-蒙特利尔/），
+  页面会通过 GitHub API 自动列出该文件夹里的图片。
+  若只想显示指定图片，可在 travel.txt 第五段写文件名。
+-->
+<html lang="zh-CN" data-lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>旅途地图 | Zixuan Xiao</title>
+<meta name="description" content="Zixuan Xiao 的旅途地图：按时间把去过的地方连起来，点击城市查看当时的记录。">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#fbfaf7">
+<link rel="canonical" href="https://dogtorxiao.github.io/map.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%232b4a6f'/%3E%3Cpath d='M32 49s13-12.2 13-22a13 13 0 1 0-26 0c0 9.8 13 22 13 22Z' fill='none' stroke='%23fbfaf7' stroke-width='3'/%3E%3Ccircle cx='32' cy='27' r='4.6' fill='%23fbfaf7'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/leaflet/leaflet.css">
+<style>
+  :root{
+    --paper:#fbfaf7;
+    --paper-2:#f3f0e7;
+    --ink:#1b1a17;
+    --ink-2:#3b3933;
+    --muted:#6c685e;
+    --rule:#d9d4c6;
+    --rule-soft:#e7e3d8;
+    --accent:#2b4a6f;
+    --serif:"Charter","Iowan Old Style","Palatino Linotype",Palatino,"Songti SC",STSong,"Noto Serif SC",Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:var(--sans);font-size:16px;line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .wrap{max-width:1128px;margin:0 auto;padding:0 clamp(20px,4.5vw,56px)}
+
+  /* 顶栏 */
+  .topbar{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:1px solid var(--rule)}
+  .top-in{height:54px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .back{font-size:13px;color:var(--muted);text-decoration:none;letter-spacing:.01em}
+  .back:hover{color:var(--accent)}
+  .lang-switch{display:flex;align-items:center;gap:2px;padding:2px;border:1px solid var(--rule)}
+  .lang-switch button{
+    appearance:none;-webkit-appearance:none;border:0;background:transparent;cursor:pointer;
+    font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--muted);
+    padding:5px 9px;line-height:1;transition:background .18s ease,color .18s ease;
+  }
+  .lang-switch button:hover{color:var(--ink)}
+  .lang-switch button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+  main{padding:34px 0 24px}
+  .kicker{
+    margin:0;font-family:var(--mono);font-size:10px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--muted);
+  }
+  h1{
+    margin:8px 0 10px;font-family:var(--serif);font-weight:600;
+    font-size:clamp(30px,4.2vw,42px);line-height:1.2;letter-spacing:.005em;
+  }
+  .sub{margin:0 0 22px;max-width:46em;font-size:15px;line-height:1.8;color:var(--muted)}
+
+  /* 地图 */
+  #map{
+    position:relative;z-index:0;
+    height:clamp(400px,60vh,600px);
+    border:1px solid var(--rule);background:#ece7db;
+  }
+  .status{
+    margin:10px 0 0;min-height:1.6em;
+    font-family:var(--mono);font-size:11px;letter-spacing:.02em;color:var(--muted);
+  }
+
+  /* 时间线 */
+  .timeline{margin-top:38px}
+  .timeline h2{
+    margin:0;font-family:var(--serif);font-weight:600;font-size:20px;letter-spacing:.01em;
+  }
+  .list{list-style:none;margin:12px 0 0;padding:0;border-top:1px solid var(--rule)}
+  .list li{border-bottom:1px solid var(--rule-soft)}
+  .row{
+    display:grid;grid-template-columns:82px 210px minmax(0,1fr) 22px;gap:16px;
+    width:100%;align-items:baseline;text-align:left;
+    padding:11px 6px;border:0;background:transparent;font:inherit;color:inherit;cursor:pointer;
+    transition:background .18s ease;
+  }
+  .row:hover{background:var(--paper-2)}
+  .row-date{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--muted)}
+  .row-where{font-size:15px;font-weight:600;line-height:1.4}
+  .row-where span{margin-left:7px;font-size:11.5px;font-weight:400;color:var(--muted)}
+  .row-note{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:var(--muted)}
+  .row-go{font-size:13px;color:var(--accent);text-align:right}
+  .row--missing{cursor:default;opacity:.55}
+  .row--missing .row-go{color:var(--muted)}
+
+  .site-footer{margin-top:44px;border-top:1px solid var(--rule);padding:20px 0 40px}
+  .foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+  .foot p{margin:0}
+  .foot a{text-decoration:none;border-bottom:1px solid transparent}
+  .foot a:hover{color:var(--accent);border-color:var(--rule)}
+
+  /* Leaflet 外观 */
+  .leaflet-container{font:inherit;background:#ece7db}
+  .leaflet-tile-pane{filter:grayscale(.82) sepia(.05) brightness(1.02) contrast(1)}
+  .leaflet-bar a{
+    width:30px;height:30px;line-height:30px;
+    background:var(--paper);color:var(--ink);border-color:var(--rule);
+  }
+  .leaflet-bar a:hover{background:var(--paper-2);color:var(--ink)}
+  .leaflet-control-attribution{
+    background:rgba(251,250,247,.88)!important;
+    color:var(--muted);font-size:10px;padding:2px 6px;
+  }
+  .leaflet-control-attribution a{color:var(--muted)}
+
+  .pin-wrap{background:none;border:0}
+  .pin{
+    display:grid;place-items:center;width:26px;height:26px;border-radius:50%;
+    background:var(--accent);border:2px solid var(--paper);
+    box-shadow:0 2px 10px rgba(27,26,23,.3);
+    color:#fff;font-family:var(--mono);font-size:10.5px;line-height:1;
+    transition:transform .2s ease;
+  }
+  .pin b{font-weight:600}
+  .leaflet-marker-icon:hover .pin{transform:scale(1.14)}
+
+  .leaflet-popup-content-wrapper{
+    background:var(--paper);color:var(--ink);border:1px solid var(--rule);
+    border-radius:2px;box-shadow:0 14px 36px rgba(27,26,23,.18);
+  }
+  .leaflet-popup-content{margin:14px 16px;line-height:1.6}
+  .leaflet-popup-tip{background:var(--paper);box-shadow:none}
+  .leaflet-popup-close-button{color:var(--muted)!important;font-size:18px!important;padding:6px 6px 0 0!important}
+  .leaflet-popup-close-button:hover{color:var(--ink)!important}
+
+  .pop-date{
+    margin:0 0 5px;font-family:var(--mono);font-size:9.5px;
+    letter-spacing:.12em;color:var(--muted);text-transform:uppercase;
+  }
+  .pop-city{margin:0;font-family:var(--serif);font-size:19px;font-weight:600;line-height:1.3}
+  .pop-city span{margin-left:6px;font-family:var(--sans);font-size:11.5px;font-weight:400;color:var(--muted)}
+  .pop-note{margin:8px 0 0;font-size:13px;line-height:1.75;color:var(--ink-2)}
+  .pop-photos{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:10px}
+  .pop-photos:empty{display:none}
+  .pop-photos a{display:block;overflow:hidden;border:1px solid var(--rule)}
+  .pop-photos img{display:block;width:100%;height:74px;object-fit:cover;transition:transform .3s ease}
+  .pop-photos a:hover img{transform:scale(1.05)}
+  .pop-photos a:only-child{grid-column:1 / -1}
+  .pop-photos a:only-child img{height:128px}
+
+  @media (max-width:620px){
+    .top-in{height:48px}
+    main{padding-top:26px}
+    #map{height:52vh;min-height:340px}
+    .row{grid-template-columns:64px minmax(0,1fr) 18px;gap:6px 12px;padding:10px 4px}
+    .row-note{grid-column:2 / -1;white-space:normal}
+    .row-go{grid-row:1;grid-column:3}
+    .foot{flex-direction:column}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap top-in">
+    <a class="back" href="index.html">← <span data-t="back">返回主页</span></a>
+    <div class="lang-switch" role="group" aria-label="语言 / Language">
+      <button type="button" data-lang-set="zh" aria-pressed="true">中</button>
+      <button type="button" data-lang-set="en" aria-pressed="false">EN</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <header>
+    <p class="kicker" data-t="kicker">TRAVEL · 足迹</p>
+    <h1 data-t="title">旅途地图</h1>
+    <p class="sub" data-t="sub">按时间把去过的地方连起来。点一个城市，看看当时的时间、寄语和照片。</p>
+  </header>
+
+  <div id="map" role="application" aria-label="旅途地图"></div>
+  <p id="status" class="status" role="status" aria-live="polite">正在读取…</p>
+
+  <section class="timeline" aria-labelledby="tl-title">
+    <h2 id="tl-title" data-t="timeline">按时间</h2>
+    <ol id="list" class="list"></ol>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap foot">
+    <p data-t="footer">数据来自 travel.txt，照片放在 photos/ 文件夹。</p>
+    <p>© 2026 Zixuan Xiao · <a href="index.html" data-t="back">返回主页</a></p>
+  </div>
+</footer>
+
+<noscript>
+  <p class="wrap">这个页面需要 JavaScript 才能显示地图。数据在 <a href="travel.txt">travel.txt</a>。</p>
+</noscript>
+
+<script src="assets/leaflet/leaflet.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var REPO = 'dogtorXiao/dogtorXiao.github.io';
+  var GEO_KEY = 'travel.geo.v1';
+  var PHOTO_KEY = 'travel.ph.';
+  var NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  var lang = 'zh';
+  try { if (localStorage.getItem('lang') === 'en') lang = 'en'; } catch (e) {}
+
+  var T = {
+    zh: {
+      docTitle: '旅途地图 | Zixuan Xiao',
+      back: '返回主页',
+      kicker: 'TRAVEL · 足迹',
+      title: '旅途地图',
+      sub: '按时间把去过的地方连起来。点一个城市，看看当时的时间、寄语和照片。',
+      loading: '正在读取 travel.txt…',
+      error: '读不到 travel.txt。用 file:// 直接打开时浏览器会拦截，请通过网站访问，或在本地起一个服务器。',
+      empty: '还没有记录。在 travel.txt 里加一行，刷新页面即可。',
+      geocoding: '正在定位城市 {0}/{1}…',
+      done: '共 {0} 站 · {1} — {2}',
+      unresolved: '有 {0} 个地方没定位到：{1}',
+      timeline: '按时间',
+      footer: '数据来自 travel.txt，照片放在 photos/ 文件夹。',
+      missing: '未定位'
+    },
+    en: {
+      docTitle: 'Places | Zixuan Xiao',
+      back: 'Home',
+      kicker: 'TRAVEL',
+      title: 'Places',
+      sub: 'Every place I have been, connected in time. Click a city to see the date, note, and photos.',
+      loading: 'Loading travel.txt…',
+      error: 'Could not load travel.txt. Browsers block file:// requests; view the site or run a local server.',
+      empty: 'No entries yet. Add a line to travel.txt and reload.',
+      geocoding: 'Locating {0}/{1}…',
+      done: '{0} stops · {1} — {2}',
+      unresolved: '{0} places could not be located: {1}',
+      timeline: 'Timeline',
+      footer: 'Data from travel.txt; photos live in the photos/ folder.',
+      missing: 'not found'
+    }
+  };
+  var t = T[lang];
+
+  document.documentElement.setAttribute('data-lang', lang);
+  document.documentElement.setAttribute('lang', lang === 'en' ? 'en' : 'zh-CN');
+  document.title = t.docTitle;
+  document.querySelectorAll('[data-t]').forEach(function (el) {
+    var k = el.getAttribute('data-t');
+    if (t[k]) el.textContent = t[k];
+  });
+  document.querySelectorAll('[data-lang-set]').forEach(function (b) {
+    b.setAttribute('aria-pressed', b.getAttribute('data-lang-set') === lang ? 'true' : 'false');
+    b.addEventListener('click', function () {
+      try { localStorage.setItem('lang', b.getAttribute('data-lang-set')); } catch (e) {}
+      location.reload();
+    });
+  });
+
+  /* ── 地图 ───────────────────────────────────────────── */
+  var map = L.map('map', { scrollWheelZoom: false, worldCopyJump: true }).setView([30, 10], 2);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+  }).addTo(map);
+  map.on('click', function () { map.scrollWheelZoom.enable(); });
+
+  var routeLayer = L.layerGroup().addTo(map);
+  var statusEl = document.getElementById('status');
+  var listEl = document.getElementById('list');
+  var located = [];
+  var missing = [];
+
+  /* ── 工具 ───────────────────────────────────────────── */
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+  function dateShort(d) { return d.getUTCFullYear() + '.' + pad(d.getUTCMonth() + 1); }
+  function fmtDate(d) {
+    return lang === 'en'
+      ? MONTHS[d.getUTCMonth()] + ' ' + d.getUTCFullYear()
+      : d.getUTCFullYear() + ' 年 ' + (d.getUTCMonth() + 1) + ' 月';
+  }
+  function parseDate(s) {
+    var m = String(s).match(/^(\d{4})(?:[-—/.](\d{1,2}))?(?:[-—/.](\d{1,2}))?$/);
+    if (!m) return null;
+    var y = parseInt(m[1], 10), mo = m[2] ? parseInt(m[2], 10) - 1 : 0, day = m[3] ? parseInt(m[3], 10) : 1;
+    if (mo < 0 || mo > 11 || day < 1 || day > 31) return null;
+    return new Date(Date.UTC(y, mo, day));
+  }
+  function parse(text) {
+    var out = [];
+    text.replace(/^\uFEFF/, '').split(/\r?\n/).forEach(function (line) {
+      line = line.trim();
+      if (!line || line.charAt(0) === '#') return;
+      var parts = line.split('|').map(function (s) { return s.trim(); });
+      if (parts.length < 3) return;
+      var d = parseDate(parts[0]);
+      if (!d) return;
+      out.push({
+        date: d,
+        country: parts[1],
+        city: parts[2],
+        note: parts[3] || '',
+        photos: parts[4] ? parts[4].split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [],
+        folder: parts[1] + '-' + parts[2]
+      });
+    });
+    out.sort(function (a, b) { return a.date - b.date; });
+    return out;
+  }
+
+  /* ── 地理编码（带缓存，1 次/秒） ─────────────────────── */
+  function loadGeo() {
+    try { return JSON.parse(localStorage.getItem(GEO_KEY) || '{}'); } catch (e) { return {}; }
+  }
+  function saveGeo(c) {
+    try { localStorage.setItem(GEO_KEY, JSON.stringify(c)); } catch (e) {}
+  }
+  async function geocode(p, cache) {
+    var key = p.city + ', ' + p.country;
+    if (key in cache) return { hit: cache[key], cached: true };
+    var url = NOMINATIM + '?format=jsonv2&limit=1&q=' + encodeURIComponent(key);
+    try {
+      var res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      var data = await res.json();
+      var hit = data && data[0] ? [parseFloat(data[0].lat), parseFloat(data[0].lon)] : null;
+      if (hit) { cache[key] = hit; saveGeo(cache); }
+      return { hit: hit, cached: false };
+    } catch (e) {
+      return { hit: null, cached: false };
+    }
+  }
+
+  /* ── 按时间连线 ─────────────────────────────────────── */
+  function drawRoute() {
+    routeLayer.clearLayers();
+    var pts = located.map(function (p) { return [p.latlng.lat, p.latlng.lng]; });
+    if (pts.length > 1) {
+      L.polyline(pts, {
+        color: '#2b4a6f', weight: 1.4, opacity: .55,
+        dashArray: '5 7', lineCap: 'round', interactive: false
+      }).addTo(routeLayer);
+    }
+  }
+
+  /* ── 标记与弹窗 ─────────────────────────────────────── */
+  function pinIcon(n) {
+    return L.divIcon({
+      className: 'pin-wrap',
+      html: '<span class="pin"><b>' + n + '</b></span>',
+      iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -15]
+    });
+  }
+  function popupHtml(p) {
+    var html = '<div class="pop">';
+    html += '<p class="pop-date">' + esc(fmtDate(p.date)) + '</p>';
+    html += '<h3 class="pop-city">' + esc(p.city) + '<span>' + esc(p.country) + '</span></h3>';
+    if (p.note) html += '<p class="pop-note">' + esc(p.note) + '</p>';
+    html += '<div class="pop-photos" data-folder="' + esc(p.folder) + '" data-photos="' + esc(p.photos.join(',')) + '"></div>';
+    html += '</div>';
+    return html;
+  }
+  function addPlace(p, hit, n) {
+    p.latlng = L.latLng(hit[0], hit[1]);
+    p.marker = L.marker(p.latlng, {
+      icon: pinIcon(n), title: p.city + ' · ' + p.country, riseOnHover: true
+    }).addTo(map);
+    p.marker.bindPopup(popupHtml(p), { maxWidth: 300, minWidth: 250, autoPanPadding: [28, 28] });
+    located.push(p);
+    drawRoute();
+  }
+
+  /* ── 照片：列出 photos/国家-城市/ ────────────────────── */
+  function apiUrl(folder) {
+    var path = 'photos/' + folder;
+    return 'https://api.github.com/repos/' + REPO + '/contents/' +
+      path.split('/').map(encodeURIComponent).join('/');
+  }
+  async function listPhotos(folder) {
+    var key = PHOTO_KEY + folder;
+    try {
+      var cached = sessionStorage.getItem(key);
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+    try {
+      var res = await fetch(apiUrl(folder), { headers: { 'Accept': 'application/vnd.github+json' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var items = await res.json();
+      var files = items
+        .filter(function (it) { return it.type === 'file' && /\.(jpe?g|png|webp|gif|avif)$/i.test(it.name); })
+        .sort(function (a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); })
+        .map(function (it) { return 'photos/' + folder + '/' + it.name; });
+      try { sessionStorage.setItem(key, JSON.stringify(files)); } catch (e) {}
+      return files;
+    } catch (e) {
+      return ['photos/' + folder + '/cover.jpg'];
+    }
+  }
+  async function fillPhotos(box) {
+    if (box.dataset.done) return;
+    box.dataset.done = '1';
+    var folder = box.dataset.folder;
+    var manual = (box.dataset.photos || '').split(',').filter(Boolean);
+    var files = manual.length
+      ? manual.map(function (n) { return 'photos/' + folder + '/' + n; })
+      : await listPhotos(folder);
+    if (!files.length) { box.remove(); return; }
+    box.innerHTML = files.slice(0, 4).map(function (src) {
+      return '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="" loading="lazy"></a>';
+    }).join('');
+    box.querySelectorAll('img').forEach(function (img) {
+      img.addEventListener('error', function () {
+        var a = img.parentNode;
+        img.remove();
+        if (a && !a.querySelector('img')) a.remove();
+      });
+    });
+  }
+  map.on('popupopen', function (e) {
+    var node = e.popup.getElement();
+    var box = node && node.querySelector('.pop-photos');
+    if (box) fillPhotos(box);
+  });
+
+  /* ── 时间线列表 ─────────────────────────────────────── */
+  function buildList(places) {
+    listEl.innerHTML = '';
+    places.forEach(function (p) {
+      var li = document.createElement('li');
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'row' + (p.marker ? '' : ' row--missing');
+      btn.innerHTML =
+        '<span class="row-date">' + dateShort(p.date) + '</span>' +
+        '<span class="row-where">' + esc(p.city) + '<span>' + esc(p.country) + '</span></span>' +
+        '<span class="row-note">' + (p.note ? esc(p.note) : '') + '</span>' +
+        '<span class="row-go" aria-hidden="true">' + (p.marker ? '↗' : '—') + '</span>';
+      if (p.marker) {
+        btn.setAttribute('aria-label', p.city + ' · ' + p.country);
+        btn.addEventListener('click', function () {
+          map.flyTo(p.latlng, Math.max(map.getZoom(), 6), { duration: .7 });
+          p.marker.openPopup();
+        });
+      } else {
+        btn.disabled = true;
+        btn.title = t.missing;
+      }
+      li.appendChild(btn);
+      listEl.appendChild(li);
+    });
+  }
+
+  /* ── 主流程 ─────────────────────────────────────────── */
+  (async function () {
+    statusEl.textContent = t.loading;
+    var text;
+    try {
+      var res = await fetch('travel.txt', { cache: 'no-cache' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      text = await res.text();
+    } catch (e) {
+      statusEl.textContent = t.error;
+      return;
+    }
+
+    var places = parse(text);
+    if (!places.length) { statusEl.textContent = t.empty; return; }
+
+    var cache = loadGeo();
+    for (var i = 0; i < places.length; i++) {
+      statusEl.textContent = t.geocoding.replace('{0}', i + 1).replace('{1}', places.length);
+      var r = await geocode(places[i], cache);
+      if (r.hit) addPlace(places[i], r.hit, i + 1);
+      else missing.push(places[i]);
+      if (!r.cached) await sleep(1100);
+    }
+
+    buildList(places);
+
+    if (located.length === 1) {
+      map.setView(located[0].latlng, 6);
+    } else if (located.length > 1) {
+      map.fitBounds(L.latLngBounds(located.map(function (p) { return p.latlng; })), {
+        padding: [52, 52], maxZoom: 6
+      });
+    }
+
+    var msg = t.done
+      .replace('{0}', located.length)
+      .replace('{1}', located.length ? fmtDate(located[0].date) : '')
+      .replace('{2}', located.length ? fmtDate(located[located.length - 1].date) : '');
+    if (missing.length) {
+      msg += ' · ' + t.unresolved
+        .replace('{0}', missing.length)
+        .replace('{1}', missing.map(function (p) { return p.city; }).join(lang === 'en' ? ', ' : '、'));
+    }
+    statusEl.textContent = msg;
+  })();
+})();
+</script>
+</body>
+</html>
