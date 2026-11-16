@@ -1,4 +1,4 @@
-# Zixuan Xiao — Academic Homepage
+# Zixuan Xiao — Profile Homepage
 
 Source for **https://dogtorxiao.github.io**
 
