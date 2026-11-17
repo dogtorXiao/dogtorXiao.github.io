@@ -109,8 +109,7 @@
   .foot a:hover{color:var(--accent);border-color:var(--rule)}
 
   /* Leaflet 外观 */
-  .leaflet-container{font:inherit;background:#ece7db}
-  .leaflet-tile-pane{filter:grayscale(.82) sepia(.05) brightness(1.02) contrast(1)}
+  .leaflet-container{font:inherit;background:#e7e9e4}
   .leaflet-bar a{
     width:30px;height:30px;line-height:30px;
     background:var(--paper);color:var(--ink);border-color:var(--rule);
@@ -212,10 +211,6 @@
 (function () {
   'use strict';
 
-  var REPO = 'dogtorXiao/dogtorXiao.github.io';
-  var GEO_KEY = 'travel.geo.v1';
-  var PHOTO_KEY = 'travel.ph.';
-  var NOMINATIM = 'https://nominatim.openstreetmap.org/search';
   var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
   var lang = 'zh';
@@ -272,11 +267,19 @@
   });
 
   /* ── 地图 ───────────────────────────────────────────── */
-  var map = L.map('map', { scrollWheelZoom: false, worldCopyJump: true }).setView([30, 10], 2);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 18,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+  var map = L.map('map', {
+    scrollWheelZoom: false, worldCopyJump: true, minZoom: 2, maxZoom: 7
+  }).setView([30, 10], 2);
+  map.attributionControl.addAttribution(
+    'Map &copy; <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a> · Cities &copy; GeoNames (CC BY 4.0)'
+  );
+  var worldLayer = L.geoJSON(null, {
+    style: { color: '#cbc4b3', weight: .7, fillColor: '#f7f4ec', fillOpacity: 1 },
+    interactive: false
   }).addTo(map);
+  fetch('assets/geo/world.json').then(function (r) { return r.json(); })
+    .then(function (g) { worldLayer.addData(g); })
+    .catch(function () {});
   map.on('click', function () { map.scrollWheelZoom.enable(); });
 
   var routeLayer = L.layerGroup().addTo(map);
@@ -328,26 +331,41 @@
     return out;
   }
 
-  /* ── 地理编码（带缓存，1 次/秒） ─────────────────────── */
-  function loadGeo() {
-    try { return JSON.parse(localStorage.getItem(GEO_KEY) || '{}'); } catch (e) { return {}; }
+  /* ── 本地城市坐标（同源加载，不请求外部服务） ───────── */
+  var geoCountries = null;
+  var geoMaps = {};
+
+  async function loadGeoData(places) {
+    try { geoCountries = await (await fetch('assets/geo/countries.json')).json(); }
+    catch (e) { geoCountries = {}; }
+    var codes = [];
+    places.forEach(function (p) {
+      var c = geoCountries[p.country] || geoCountries[String(p.country).toLowerCase()];
+      if (c && codes.indexOf(c) < 0) codes.push(c);
+    });
+    await Promise.all(codes.map(async function (c) {
+      try { geoMaps[c] = await (await fetch('assets/geo/cities/' + c + '.json')).json(); }
+      catch (e) { geoMaps[c] = {}; }
+    }));
   }
-  function saveGeo(c) {
-    try { localStorage.setItem(GEO_KEY, JSON.stringify(c)); } catch (e) {}
-  }
-  async function geocode(p, cache) {
-    var key = p.city + ', ' + p.country;
-    if (key in cache) return { hit: cache[key], cached: true };
-    var url = NOMINATIM + '?format=jsonv2&limit=1&q=' + encodeURIComponent(key);
-    try {
-      var res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-      var data = await res.json();
-      var hit = data && data[0] ? [parseFloat(data[0].lat), parseFloat(data[0].lon)] : null;
-      if (hit) { cache[key] = hit; saveGeo(cache); }
-      return { hit: hit, cached: false };
-    } catch (e) {
-      return { hit: null, cached: false };
+
+  function lookupPlace(p) {
+    if (!geoCountries) return null;
+    var c = geoCountries[p.country] || geoCountries[String(p.country).toLowerCase()];
+    var d = c ? geoMaps[c] : null;
+    if (!d) return null;
+    var city = String(p.city);
+    var keys = [city, city + '市', city + '县', city + '区'];
+    if (city.length > 2 && '市县区'.indexOf(city.charAt(city.length - 1)) >= 0) {
+      keys.push(city.slice(0, -1));
     }
+    var i;
+    for (i = 0; i < keys.length; i++) { if (d[keys[i]]) return d[keys[i]]; }
+    for (i = 0; i < keys.length; i++) {
+      var k = keys[i].toLowerCase();
+      if (d[k]) return d[k];
+    }
+    return null;
   }
 
   /* ── 按时间连线 ─────────────────────────────────────── */
@@ -389,31 +407,15 @@
     drawRoute();
   }
 
-  /* ── 照片：列出 photos/国家-城市/ ────────────────────── */
-  function apiUrl(folder) {
-    var path = 'photos/' + folder;
-    return 'https://api.github.com/repos/' + REPO + '/contents/' +
-      path.split('/').map(encodeURIComponent).join('/');
+  /* ── 照片：photos.json 清单（同源加载，无外部请求） ── */
+  var photoManifest = {};
+  async function loadPhotoManifest() {
+    try { photoManifest = await (await fetch('photos.json', { cache: 'no-cache' })).json(); }
+    catch (e) { photoManifest = {}; }
   }
-  async function listPhotos(folder) {
-    var key = PHOTO_KEY + folder;
-    try {
-      var cached = sessionStorage.getItem(key);
-      if (cached) return JSON.parse(cached);
-    } catch (e) {}
-    try {
-      var res = await fetch(apiUrl(folder), { headers: { 'Accept': 'application/vnd.github+json' } });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      var items = await res.json();
-      var files = items
-        .filter(function (it) { return it.type === 'file' && /\.(jpe?g|png|webp|gif|avif)$/i.test(it.name); })
-        .sort(function (a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); })
-        .map(function (it) { return 'photos/' + folder + '/' + it.name; });
-      try { sessionStorage.setItem(key, JSON.stringify(files)); } catch (e) {}
-      return files;
-    } catch (e) {
-      return ['photos/' + folder + '/cover.jpg'];
-    }
+  function listPhotos(folder) {
+    if (photoManifest[folder] && photoManifest[folder].length) return photoManifest[folder];
+    return ['photos/' + folder + '/cover.jpg'];
   }
   async function fillPhotos(box) {
     if (box.dataset.done) return;
@@ -486,13 +488,12 @@
     var places = parse(text);
     if (!places.length) { statusEl.textContent = t.empty; return; }
 
-    var cache = loadGeo();
+    await Promise.all([loadGeoData(places), loadPhotoManifest()]);
+
     for (var i = 0; i < places.length; i++) {
-      statusEl.textContent = t.geocoding.replace('{0}', i + 1).replace('{1}', places.length);
-      var r = await geocode(places[i], cache);
-      if (r.hit) addPlace(places[i], r.hit, i + 1);
+      var hit = lookupPlace(places[i]);
+      if (hit) addPlace(places[i], hit, i + 1);
       else missing.push(places[i]);
-      if (!r.cached) await sleep(1100);
     }
 
     buildList(places);
