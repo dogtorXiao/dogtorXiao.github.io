@@ -459,6 +459,7 @@
         btn.addEventListener('click', function () {
           map.flyTo(p.latlng, Math.max(map.getZoom(), 6), { duration: .7 });
           p.marker.openPopup();
+          document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
       } else {
         btn.disabled = true;
