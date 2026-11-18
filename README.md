@@ -20,3 +20,25 @@ Bilingual (中 / EN) via the switch in the top-right corner.
 The map makes **no external requests**: outlines, coordinates, and photo lists are all
 served from this repository, so it keeps working on networks where OpenStreetMap tiles
 or Nominatim are unavailable. Only the attribution links point outside.
+
+<!-- # 放好 photos/国家-城市/ 里的图片后
+python3 scripts/build_photos.py -->
+
+## 地点定位
+
+城市坐标来自 GeoNames，同名地点按人口优先选择，并优先匹配「市 / 县 / 区 / 特区」等完整名称。
+如果某个地点仍然定位不对，在 `assets/geo/overrides.json` 里钉住坐标：
+
+```json
+{
+  "美国|华盛顿": [38.8951, -77.0364]
+}
+```
+
+改完运行一次检查脚本，逐条核对：
+
+```
+python3 scripts/check_places.py
+```
+
+它会列出 `travel.txt` 每个地点解析到的经纬度和匹配到的名称（`override` 表示用了上面的手动坐标）。

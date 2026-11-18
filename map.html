@@ -334,10 +334,14 @@
   /* ── 本地城市坐标（同源加载，不请求外部服务） ───────── */
   var geoCountries = null;
   var geoMaps = {};
+  var placeOverrides = {};
+  var SUFFIXES = ['市', '特区', '特别行政区', '自治州', '地区', '县', '区', '旗', '盟'];
 
   async function loadGeoData(places) {
     try { geoCountries = await (await fetch('assets/geo/countries.json')).json(); }
     catch (e) { geoCountries = {}; }
+    try { placeOverrides = await (await fetch('assets/geo/overrides.json')).json(); }
+    catch (e) { placeOverrides = {}; }
     var codes = [];
     places.forEach(function (p) {
       var c = geoCountries[p.country] || geoCountries[String(p.country).toLowerCase()];
@@ -350,19 +354,25 @@
   }
 
   function lookupPlace(p) {
+    var okey = p.country + '|' + p.city;
+    if (placeOverrides[okey]) return placeOverrides[okey];
     if (!geoCountries) return null;
     var c = geoCountries[p.country] || geoCountries[String(p.country).toLowerCase()];
     var d = c ? geoMaps[c] : null;
     if (!d) return null;
     var city = String(p.city);
-    var keys = [city, city + '市', city + '县', city + '区'];
-    if (city.length > 2 && '市县区'.indexOf(city.charAt(city.length - 1)) >= 0) {
-      keys.push(city.slice(0, -1));
-    }
-    var i;
+    var base = city;
+    SUFFIXES.forEach(function (s) {
+      if (base.length > s.length && base.slice(-s.length) === s) base = base.slice(0, -s.length);
+    });
+    var keys = [];
+    SUFFIXES.forEach(function (s) { keys.push(base + s); });
+    if (base !== city) keys.push(city);
+    keys.push(base);
+    var i, k;
     for (i = 0; i < keys.length; i++) { if (d[keys[i]]) return d[keys[i]]; }
     for (i = 0; i < keys.length; i++) {
-      var k = keys[i].toLowerCase();
+      k = keys[i].toLowerCase();
       if (d[k]) return d[k];
     }
     return null;
