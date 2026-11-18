@@ -24,7 +24,7 @@ or Nominatim are unavailable. Only the attribution links point outside.
 <!-- # 放好 photos/国家-城市/ 里的图片后
 python3 scripts/build_photos.py -->
 
-## 地点定位
+<!-- ## 地点定位
 
 城市坐标来自 GeoNames，同名地点按人口优先选择，并优先匹配「市 / 县 / 区 / 特区」等完整名称。
 如果某个地点仍然定位不对，在 `assets/geo/overrides.json` 里钉住坐标：
@@ -41,4 +41,4 @@ python3 scripts/build_photos.py -->
 python3 scripts/check_places.py
 ```
 
-它会列出 `travel.txt` 每个地点解析到的经纬度和匹配到的名称（`override` 表示用了上面的手动坐标）。
+它会列出 `travel.txt` 每个地点解析到的经纬度和匹配到的名称（`override` 表示用了上面的手动坐标）。 -->
