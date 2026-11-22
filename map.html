@@ -148,7 +148,14 @@
   .pop-city{margin:0;font-family:var(--serif);font-size:19px;font-weight:600;line-height:1.3}
   .pop-city span{margin-left:6px;font-family:var(--sans);font-size:11.5px;font-weight:400;color:var(--muted)}
   .pop-note{margin:8px 0 0;font-size:13px;line-height:1.75;color:var(--ink-2)}
-  .pop-photos{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:10px}
+  .pop-photos{
+    display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:10px;
+    max-height:236px;overflow-y:auto;overscroll-behavior:contain;
+    padding-right:4px;scrollbar-width:thin;scrollbar-color:var(--rule) transparent;
+  }
+  .pop-photos::-webkit-scrollbar{width:6px}
+  .pop-photos::-webkit-scrollbar-track{background:transparent}
+  .pop-photos::-webkit-scrollbar-thumb{background:var(--rule);border-radius:3px}
   .pop-photos:empty{display:none}
   .pop-photos a{display:block;overflow:hidden;border:1px solid var(--rule)}
   .pop-photos img{display:block;width:100%;height:74px;object-fit:cover;transition:transform .3s ease}
@@ -398,21 +405,49 @@
       iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -15]
     });
   }
+  function photosFor(p) {
+    var manual = p.photos || [];
+    var files = manual.length
+      ? manual.map(function (n) { return 'photos/' + p.folder + '/' + n; })
+      : (photoManifest[p.folder] || []);
+    return files.slice(0, 20);
+  }
   function popupHtml(p) {
     var html = '<div class="pop">';
     html += '<p class="pop-date">' + esc(fmtDate(p.date)) + '</p>';
     html += '<h3 class="pop-city">' + esc(p.city) + '<span>' + esc(p.country) + '</span></h3>';
     if (p.note) html += '<p class="pop-note">' + esc(p.note) + '</p>';
-    html += '<div class="pop-photos" data-folder="' + esc(p.folder) + '" data-photos="' + esc(p.photos.join(',')) + '"></div>';
+    var files = photosFor(p);
+    if (files.length) {
+      html += '<div class="pop-photos">' + files.map(function (src) {
+        return '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="" loading="lazy" onerror="this.parentNode.remove()"></a>';
+      }).join('') + '</div>';
+    }
     html += '</div>';
     return html;
   }
+  function fitPopup(popup) {
+    var el = popup.getElement();
+    if (!el) return;
+    var m = map.getContainer().getBoundingClientRect();
+    var r = el.getBoundingClientRect();
+    var pad = 14, dx = 0, dy = 0;
+    if (r.top < m.top + pad) dy = r.top - (m.top + pad);
+    else if (r.bottom > m.bottom - pad) dy = r.bottom - (m.bottom - pad);
+    if (r.left < m.left + pad) dx = r.left - (m.left + pad);
+    else if (r.right > m.right - pad) dx = r.right - (m.right - pad);
+    if (dx || dy) map.panBy([dx, dy], { animate: false });
+  }
+  map.on('popupopen', function (e) {
+    setTimeout(function () { fitPopup(e.popup); }, 0);
+  });
+
   function addPlace(p, hit, n) {
     p.latlng = L.latLng(hit[0], hit[1]);
     p.marker = L.marker(p.latlng, {
       icon: pinIcon(n), title: p.city + ' · ' + p.country, riseOnHover: true
     }).addTo(map);
-    p.marker.bindPopup(popupHtml(p), { maxWidth: 300, minWidth: 250, autoPanPadding: [28, 28] });
+    p.marker.bindPopup(popupHtml(p), { maxWidth: 300, minWidth: 250, autoPan: false });
     located.push(p);
     drawRoute();
   }
@@ -423,36 +458,6 @@
     try { photoManifest = await (await fetch('photos.json', { cache: 'no-cache' })).json(); }
     catch (e) { photoManifest = {}; }
   }
-  function listPhotos(folder) {
-    if (photoManifest[folder] && photoManifest[folder].length) return photoManifest[folder];
-    return ['photos/' + folder + '/cover.jpg'];
-  }
-  async function fillPhotos(box) {
-    if (box.dataset.done) return;
-    box.dataset.done = '1';
-    var folder = box.dataset.folder;
-    var manual = (box.dataset.photos || '').split(',').filter(Boolean);
-    var files = manual.length
-      ? manual.map(function (n) { return 'photos/' + folder + '/' + n; })
-      : await listPhotos(folder);
-    if (!files.length) { box.remove(); return; }
-    box.innerHTML = files.slice(0, 4).map(function (src) {
-      return '<a href="' + esc(src) + '" target="_blank" rel="noopener"><img src="' + esc(src) + '" alt="" loading="lazy"></a>';
-    }).join('');
-    box.querySelectorAll('img').forEach(function (img) {
-      img.addEventListener('error', function () {
-        var a = img.parentNode;
-        img.remove();
-        if (a && !a.querySelector('img')) a.remove();
-      });
-    });
-  }
-  map.on('popupopen', function (e) {
-    var node = e.popup.getElement();
-    var box = node && node.querySelector('.pop-photos');
-    if (box) fillPhotos(box);
-  });
-
   /* ── 时间线列表 ─────────────────────────────────────── */
   function buildList(places) {
     listEl.innerHTML = '';
@@ -469,7 +474,7 @@
       if (p.marker) {
         btn.setAttribute('aria-label', p.city + ' · ' + p.country);
         btn.addEventListener('click', function () {
-          map.flyTo(p.latlng, Math.max(map.getZoom(), 6), { duration: .7 });
+          map.setView(p.latlng, Math.max(map.getZoom(), 6), { animate: false });
           p.marker.openPopup();
           document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
