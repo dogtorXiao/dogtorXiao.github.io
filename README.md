@@ -22,7 +22,7 @@ served from this repository, so it keeps working on networks where OpenStreetMap
 or Nominatim are unavailable. Only the attribution links point outside.
 
 <!-- # 放好 photos/国家-城市/ 里的图片后
-python3 scripts/build_photos.py -->
+python scripts/build_photos.py -->
 
 <!-- ## 地点定位
 
@@ -38,7 +38,7 @@ python3 scripts/build_photos.py -->
 改完运行一次检查脚本，逐条核对：
 
 ```
-python3 scripts/check_places.py
+python scripts/check_places.py
 ```
 
 它会列出 `travel.txt` 每个地点解析到的经纬度和匹配到的名称（`override` 表示用了上面的手动坐标）。 -->
